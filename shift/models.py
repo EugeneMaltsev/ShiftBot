@@ -1,12 +1,23 @@
+from django.conf import settings
+# from django.contrib.auth import get_user_model
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser
 import numpy as np
 import pandas as pd
 import datetime
 
 
+# TODO: fix 'get_user_model()'
+
+
+class User(AbstractUser):
+    email = models.EmailField(unique=True)
+
+    REQUIRED_FIELDS = ['email']
+
+
 class Project(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey('User', on_delete=models.CASCADE)
     task = models.CharField(max_length=128)
     technical_requirement = models.TextField()
     customer = models.CharField(max_length=64, blank=True)
@@ -31,7 +42,7 @@ class Project(models.Model):
         return statistics
 
     def __str__(self):
-        return f'{self.user.username} | {self.task}'
+        return f'{settings.AUTH_USER_MODEL.username} | {self.task}'
 
 
 class Shift(models.Model):
@@ -67,5 +78,5 @@ class Shift(models.Model):
         return statistics
 
     def __str__(self):
-        return f'{self.user_project.user.first_name} {self.user_project.user.last_name}' \
+        return f'{self.user_project.user} {self.user_project.user.last_name}' \
                f' | {self.shift_start_time.date()} | {self.shift_start_time.time()} - {self.shift_end_time.time()}'
