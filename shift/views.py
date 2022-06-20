@@ -1,3 +1,104 @@
-from shift.serializers import *
+from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 from rest_framework import generics
-from django.contrib.auth.models import User
+from rest_framework import permissions
+from rest_framework.views import APIView
+from rest_framework_simplejwt import authentication
+
+from shift import project_services
+from shift.models import Project, Shift
+from shift.serializers import ProjectSerializer, ShiftSerializer, ShiftStatisticSerializer, ProjectStatisticSerializer
+
+
+class ProjectList(generics.ListAPIView):
+    queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
+    permission_classes = [permissions.IsAuthenticated, ]
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user)
+
+
+class ProjectCreate(generics.CreateAPIView):
+    queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
+    permission_classes = [permissions.IsAuthenticated, ]
+
+    def perform_create(self, serializer):
+        return serializer.save(user=self.request.user)
+
+
+class ProjectDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
+    permission_classes = [permissions.IsAuthenticated, ]
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user)
+
+
+class ShiftList(generics.ListAPIView):
+    queryset = Shift.objects.all()
+    serializer_class = ShiftSerializer
+    permission_classes = [permissions.IsAuthenticated, ]
+
+    def get_queryset(self):
+        return project_services.user_project_queryset(self.request, self.queryset)
+
+
+class ShiftCreate(generics.CreateAPIView):
+    queryset = Project.objects.all()
+    serializer_class = ShiftSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        if self.get_queryset().exists():
+            return serializer.save(user_project_id=self.request.data['user_project'])
+        else:
+            raise ValidationError({'user_project': f'Object {self.request.data["user_project"]} does not exist'})
+
+
+
+    def get_queryset(self):
+        return self.queryset.filter(user_id=self.request.user).filter(id=self.request.data['user_project'])
+
+
+class ShiftDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Shift.objects.all()
+    serializer_class = ShiftSerializer
+    permission_classes = [permissions.IsAuthenticated, ]
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        return project_services.user_project_queryset(self.request, self.queryset)
+
+
+class ProjectStatisticView(APIView):
+    queryset = Project.objects.all()
+    authentication_classes = [authentication.JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        statistic = project_services.get_projects_statistics(queryset=self.get_queryset())
+        return Response(ProjectStatisticSerializer(statistic).data)
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user)
+
+
+class ShiftStatisticView(APIView):
+    queryset = Shift.objects.all()
+    authentication_classes = [authentication.JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated, ]
+
+    def get(self, request):
+        statistic = project_services.get_shift_statistics(queryset=self.get_queryset())
+        return Response(ShiftStatisticSerializer(statistic).data)
+
+    def get_queryset(self):
+        return project_services.user_project_queryset(self.request, self.queryset)
+
+# TODO: make [IsOwner] Permission
+# TODO: What if user doesn't have any projects or shift?
+# TODO: Fix different exceptions in different circumstances when create the shift with invalid pk
