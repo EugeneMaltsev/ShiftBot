@@ -1,4 +1,4 @@
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, NotFound
 from shift.models import Shift, Project
 import numpy as np
 import pandas as pd
@@ -65,13 +65,23 @@ def get_shift_statistics(queryset):
     return statistics
 
 
-def user_project_queryset(request, queryset):
+def all_shifts_by_project_queryset(request, queryset):
     try:
-        if not Project.objects.filter(user=request.user).filter(id=request.data['user_project']):
-            raise ValidationError({'user_project': f'Object {request.data["user_project"]} does not exist'})
+        if Project.objects.filter(user=request.user).filter(id=request.data['user_project']).exists():
+            if queryset.filter(user_project_id=request.data['user_project']).exists():
+                return queryset.filter(user_project_id=request.data['user_project'])
+            else:
+                raise NotFound('There are no shifts in this project yet')
         else:
-            return queryset.filter(user_project_id=request.data['user_project'])
+            raise NotFound({'user_project': f'Project {request.data["user_project"]} does not exist'})
     except KeyError:
         raise ValidationError({'user_project': 'This field is required'})
     except ValueError:
         raise ValidationError({'user_project': 'Incorrect type. Expected pk value, received str.'})
+
+
+def all_projects_by_user_queryset(request, queryset):
+    if queryset.exists():
+        return queryset.filter(user=request.user)
+    else:
+        raise NotFound('No project has been created yet')

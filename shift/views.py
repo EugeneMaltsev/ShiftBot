@@ -1,4 +1,4 @@
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework import generics
 from rest_framework import permissions
@@ -16,7 +16,7 @@ class ProjectList(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, ]
 
     def get_queryset(self):
-        return self.queryset.filter(user=self.request.user)
+        return project_services.all_projects_by_user_queryset(self.request, self.queryset)
 
 
 class ProjectCreate(generics.CreateAPIView):
@@ -35,7 +35,7 @@ class ProjectDetail(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'id'
 
     def get_queryset(self):
-        return self.queryset.filter(user=self.request.user)
+        return project_services.all_projects_by_user_queryset(self.request, self.queryset)
 
 
 class ShiftList(generics.ListAPIView):
@@ -44,7 +44,7 @@ class ShiftList(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, ]
 
     def get_queryset(self):
-        return project_services.user_project_queryset(self.request, self.queryset)
+        return project_services.all_shifts_by_project_queryset(self.request, self.queryset)
 
 
 class ShiftCreate(generics.CreateAPIView):
@@ -56,9 +56,7 @@ class ShiftCreate(generics.CreateAPIView):
         if self.get_queryset().exists():
             return serializer.save(user_project_id=self.request.data['user_project'])
         else:
-            raise ValidationError({'user_project': f'Object {self.request.data["user_project"]} does not exist'})
-
-
+            raise NotFound({'user_project': f'Project {self.request.data["user_project"]} does not exist'})
 
     def get_queryset(self):
         return self.queryset.filter(user_id=self.request.user).filter(id=self.request.data['user_project'])
@@ -71,7 +69,7 @@ class ShiftDetail(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'id'
 
     def get_queryset(self):
-        return project_services.user_project_queryset(self.request, self.queryset)
+        return project_services.all_shifts_by_project_queryset(self.request, self.queryset)
 
 
 class ProjectStatisticView(APIView):
@@ -84,7 +82,7 @@ class ProjectStatisticView(APIView):
         return Response(ProjectStatisticSerializer(statistic).data)
 
     def get_queryset(self):
-        return self.queryset.filter(user=self.request.user)
+        return project_services.all_projects_by_user_queryset(self.request, self.queryset)
 
 
 class ShiftStatisticView(APIView):
@@ -97,8 +95,7 @@ class ShiftStatisticView(APIView):
         return Response(ShiftStatisticSerializer(statistic).data)
 
     def get_queryset(self):
-        return project_services.user_project_queryset(self.request, self.queryset)
+        return project_services.all_shifts_by_project_queryset(self.request, self.queryset)
 
 # TODO: make [IsOwner] Permission
-# TODO: What if user doesn't have any projects or shift?
 # TODO: Fix different exceptions in different circumstances when create the shift with invalid pk
