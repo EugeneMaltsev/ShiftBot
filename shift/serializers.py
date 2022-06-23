@@ -13,7 +13,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class ProjectSerializer(serializers.ModelSerializer):
-    user = serializers.ReadOnlyField(source='user.username')
+    owner = serializers.ReadOnlyField(source='owner.username')
 
     class Meta:
         model = Project
@@ -27,8 +27,8 @@ class ShiftSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def validate(self, attrs):
-        if attrs['shift_start_time'] > attrs['shift_end_time']:
-            raise ValidationError({'shift_end_time': 'shift_end_time must occur after shift_start_time'})
+        if attrs['start_time'] > attrs['end_time']:
+            raise ValidationError({'end_time': 'end_time must occur after start_time'})
         return attrs
 
     def create(self, validated_data):
@@ -36,32 +36,32 @@ class ShiftSerializer(serializers.ModelSerializer):
 
 
 class ProjectStatisticSerializer(serializers.ModelSerializer):
-    number_of_projects = serializers.IntegerField()
-    project_cost_summary = serializers.FloatField()
-    project_cost_mean = serializers.FloatField()
-    project_duration_summary = serializers.FloatField()
-    project_duration_mean = serializers.FloatField()
+    amount_of_projects = serializers.IntegerField()
+    bill_summary = serializers.FloatField()
+    bill_mean = serializers.FloatField()
+    duration_summary = serializers.FloatField()
+    duration_mean = serializers.FloatField()
 
     class Meta:
         model = Shift
-        fields = ['number_of_projects',
-                  'project_cost_summary',
-                  'project_cost_mean',
-                  'project_duration_summary',
-                  'project_duration_mean']
+        fields = ['amount_of_projects',
+                  'bill_summary',
+                  'bill_mean',
+                  'duration_summary',
+                  'duration_mean']
 
 
 class ShiftStatisticSerializer(serializers.ModelSerializer):
-    number_of_shifts = serializers.IntegerField()
-    number_of_hours = serializers.FloatField()
+    amount_of_shifts = serializers.IntegerField()
+    amount_of_hours = serializers.FloatField()
     duration_mean = serializers.FloatField()
-    salary_mean = serializers.FloatField()
-    project_cost = serializers.FloatField()
+    wage_mean = serializers.FloatField()
+    bill = serializers.FloatField()
 
     class Meta:
         model = Shift
-        fields = ['number_of_shifts',
-                  'number_of_hours',
+        fields = ['amount_of_shifts',
+                  'amount_of_hours',
                   'duration_mean',
-                  'salary_mean',
-                  'project_cost']
+                  'wage_mean',
+                  'bill']

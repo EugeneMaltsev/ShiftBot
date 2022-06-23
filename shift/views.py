@@ -16,7 +16,7 @@ class ProjectList(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, ]
 
     def get_queryset(self):
-        return project_services.all_projects_by_user_queryset(self.request, self.queryset)
+        return project_services.all_projects_by_owner_queryset(self.request, self.queryset)
 
 
 class ProjectCreate(generics.CreateAPIView):
@@ -25,7 +25,7 @@ class ProjectCreate(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated, ]
 
     def perform_create(self, serializer):
-        return serializer.save(user=self.request.user)
+        return serializer.save(owner=self.request.user)
 
 
 class ProjectDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -35,7 +35,7 @@ class ProjectDetail(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'id'
 
     def get_queryset(self):
-        return project_services.all_projects_by_user_queryset(self.request, self.queryset)
+        return project_services.all_projects_by_owner_queryset(self.request, self.queryset)
 
 
 class ShiftList(generics.ListAPIView):
@@ -54,12 +54,12 @@ class ShiftCreate(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         if self.get_queryset().exists():
-            return serializer.save(user_project_id=self.request.data['user_project'])
+            return serializer.save(project_id=self.request.data['project'])
         else:
-            raise NotFound({'user_project': f'Project {self.request.data["user_project"]} does not exist'})
+            raise NotFound({'project': f'Project {self.request.data["project"]} does not exist'})
 
     def get_queryset(self):
-        return self.queryset.filter(user_id=self.request.user).filter(id=self.request.data['user_project'])
+        return self.queryset.filter(owner_id=self.request.user).filter(id=self.request.data['project'])
 
 
 class ShiftDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -82,7 +82,7 @@ class ProjectStatisticView(APIView):
         return Response(ProjectStatisticSerializer(statistic).data)
 
     def get_queryset(self):
-        return project_services.all_projects_by_user_queryset(self.request, self.queryset)
+        return project_services.all_projects_by_owner_queryset(self.request, self.queryset)
 
 
 class ShiftStatisticView(APIView):
@@ -96,6 +96,3 @@ class ShiftStatisticView(APIView):
 
     def get_queryset(self):
         return project_services.all_shifts_by_project_queryset(self.request, self.queryset)
-
-# TODO: make [IsOwner] Permission
-# TODO: Fix different exceptions in different circumstances when create the shift with invalid pk
